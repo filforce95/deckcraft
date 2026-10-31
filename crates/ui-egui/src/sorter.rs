@@ -248,7 +248,7 @@ fn place_slides(app: &mut SlideApp, ui: &mut Ui, g: &Grid<'_>, budget: &mut u32,
                     app.ui.view = crate::ViewMode::Normal;
                 }
                 if resp.drag_started() && app.sorter.drag.is_none() {
-                    app.thumb_drag = Some((i, i));
+                    crate::thumbs::start_slide_drag(app, i);
                 }
                 resp.context_menu(|ui| crate::thumbs::slide_menu(app, ui, i));
             }
@@ -333,26 +333,20 @@ pub fn show(app: &mut SlideApp, ui: &mut Ui) {
                 app.sorter.drag = None;
             }
         }
-        if app.sorter.drag.is_none()
-            && let Some((from, _)) = app.thumb_drag
-        {
+        if app.sorter.drag.is_none() && crate::thumbs::slide_drag_live(app, crate::thumbs::drag_button(ui)) {
             if let Some(pp) = ui.input(|i| i.pointer.interact_pos()) {
                 let to =
                     rects.iter().find(|(_, r)| r.contains(pp)).map(|(i, r)| if pp.x > r.center().x { i + 1 } else { *i }).unwrap_or(doc.slides.len());
-                app.thumb_drag = Some((from, to));
+                if let Some(d) = app.thumb_drag.as_mut() {
+                    d.slot = to;
+                }
                 if let Some((_, r)) = rects.iter().find(|(i, _)| *i == to).or(rects.last()) {
                     let x = if to >= doc.slides.len() { r.max.x - 6.0 } else { r.min.x + 6.0 };
                     ui.painter().line_segment([pos2(x, r.min.y + 6.0), pos2(x, r.max.y - 20.0)], Stroke::new(3.0, t.accent));
                 }
             }
             if ui.input(|i| i.pointer.any_released()) {
-                if let Some((from, to)) = app.thumb_drag.take()
-                    && to != from
-                    && to != from + 1
-                {
-                    let _ = app.run("slide.move", json!({"from": from, "to": if to > from { to - 1 } else { to }}));
-                }
-                app.thumb_drag = None;
+                crate::thumbs::drop_slide_drag(app);
             }
         }
         // Ctrl/⌘ + wheel zooms the sorter.
@@ -475,7 +469,7 @@ pub fn outline_pane(app: &mut SlideApp, ui: &mut Ui) {
 }
 
 #[cfg(test)]
-mod ui_tests;
+pub(crate) mod ui_tests;
 
 /// A slide's outline block height before it has been laid out: title row plus its text lines.
 fn outline_estimate(s: &deckcraft_model::Slide) -> f32 {
@@ -501,7 +495,7 @@ fn outline_slide(app: &mut SlideApp, ui: &mut Ui, t: &Tokens, i: usize, s: &deck
         let cur_title = s.title();
         let mut v: String = ui.data_mut(|d| d.get_temp(id).unwrap_or_else(|| cur_title.clone()));
         let resp = ui.add(
-            egui::TextEdit::singleline(&mut v).hint_text("Slide title").font(theme::bold(14.0)).frame(egui::Frame::NONE).desired_width(f32::INFINITY),
+            egui::TextEdit::singleline(&mut v).hint_text(tl!("Slide title")).font(theme::bold(14.0)).frame(egui::Frame::NONE).desired_width(f32::INFINITY),
         );
         if resp.gained_focus() {
             let _ = app.run("slide.go", json!({"index": i}));
@@ -529,7 +523,7 @@ fn outline_slide(app: &mut SlideApp, ui: &mut Ui, t: &Tokens, i: usize, s: &deck
         ui.horizontal(|ui| {
             ui.add_space(36.0);
             let resp = ui
-                .add(egui::TextEdit::multiline(&mut v).hint_text("Slide text").frame(egui::Frame::NONE).desired_width(f32::INFINITY).desired_rows(1));
+                .add(egui::TextEdit::multiline(&mut v).hint_text(tl!("Slide text")).frame(egui::Frame::NONE).desired_width(f32::INFINITY).desired_rows(1));
             if resp.gained_focus() {
                 let _ = app.run("slide.go", json!({"index": i}));
             }
