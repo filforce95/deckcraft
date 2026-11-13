@@ -76,7 +76,7 @@ They are text, not files in this repository; without the checkout the interface 
 
 | Asset | Author | Source | Licence | Use |
 |---|---|---|---|---|
-| craft-i18n interface catalogs | craft-i18n translators, credited in its [ATTRIBUTION.md](https://github.com/storytold/craft-i18n/blob/main/ATTRIBUTION.md) | https://github.com/storytold/craft-i18n at `craft-i18n.rev` | MIT OR Apache-2.0 | Interface languages other than English (German first); clean-room translations from the English interface labels |
+| craft-i18n interface catalogs | craft-i18n translators, credited in its [ATTRIBUTION.md](https://github.com/storytold/craft-i18n/blob/main/ATTRIBUTION.md) | https://github.com/storytold/craft-i18n at `craft-i18n.rev` | MIT OR Apache-2.0 | Interface languages other than English (German, then European Portuguese); clean-room translations from the English interface labels |
 
 ## PDF writer colour profiles
 
