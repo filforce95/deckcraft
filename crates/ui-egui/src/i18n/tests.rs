@@ -21,6 +21,16 @@ const DE: &str = "@id\tlanguage.name\tDeutsch
 \tSystem language\tSystemsprache
 ";
 
+/// A European Portuguese catalog for the tests, in craft-i18n's format (context, English,
+/// translation).
+const PT: &str = "@id\tlanguage.name\tPortuguês (Portugal)
+\tHome\tBase
+\tInsert\tInserir
+\tFile\tFicheiro
+\tNotes\tNotas
+\tSystem language\tIdioma do sistema
+";
+
 fn harness(app: SlideApp) -> Harness<'static, SlideApp> {
     Harness::builder().with_size(egui::vec2(1400.0, 800.0)).build_ui_state(
         |ui, app: &mut SlideApp| {
@@ -77,13 +87,31 @@ fn the_language_setting_is_auto_or_an_offered_code() {
 }
 
 #[test]
+fn european_portuguese_is_offered_and_its_catalog_loads() {
+    let pt = use_fixture("pt-pt", PT);
+    assert_eq!(normalize_pref("PT-PT"), Some("pt-pt"));
+    assert_eq!(Lang::from_pref("pt-pt"), pt);
+    assert_eq!(pt.code(), "pt-pt");
+    assert_eq!(pt.name(), "Português (Portugal)");
+    assert_eq!(tr(pt, "Insert"), "Inserir");
+    assert_eq!(tr(pt, "Not in the catalog"), "Not in the catalog");
+    assert!(Lang::all().any(|l| l.code() == "pt-pt"));
+    // The setting accepts the tag's usual spellings through a picker value only; a locale tag
+    // resolves to the code the same way German's does.
+    for bad in ["pt", "pt-br", "pt-PT-extra"] {
+        assert_eq!(Lang::from_code(bad), None, "{bad}");
+    }
+}
+
+#[test]
 fn app_language_reports_and_changes_the_setting() {
     use_fixture("de", DE);
     let mut app = SlideApp::new(Session::with_new(), Services::default());
     let v = app.run("app.language", json!({})).unwrap();
     assert_eq!((v["language"].as_str(), v["current"].as_str()), (Some(AUTO), Some("en")));
     let codes: Vec<&str> = v["available"].as_array().unwrap().iter().filter_map(|l| l["code"].as_str()).collect();
-    assert_eq!(codes, ["en", "de"]);
+    assert_eq!(&codes[..2], ["en", "de"], "English is first, German next");
+    assert!(codes.iter().all(|c| LANGUAGES.contains(c)), "{codes:?}");
     let v = app.run("app.language", json!({"language": "DE"})).unwrap();
     assert_eq!((v["language"].as_str(), v["current"].as_str()), (Some("de"), Some("de")));
     assert_eq!(app.ui.language, "de");
